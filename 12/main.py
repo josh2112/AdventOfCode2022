@@ -1,7 +1,6 @@
 import numpy
 
-
-FORREAL = 0
+FORREAL = 1
 PART = 2
 
 
@@ -14,57 +13,69 @@ with open("input.txt" if FORREAL else "input-sample.txt", "r") as f:
     rows = numpy.array([list(l.strip()) for l in f.readlines()])
 
 
-start, end = find("S"), find("E")
-rows[start] = "a"
-rows[end] = "z"
-
-
 def part1():
-    solution = None
+    start, end = find("S"), find("E")
+    rows[start] = "a"
+    rows[end] = "z"
 
-    def climb(p, path=[]):
-        global solution
-        path.append(p)
-        if solution and len(path) >= len(solution):
-            return
-        if p == end:
-            solution = path
-            return
-        for v in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            p1 = (p[0] + v[0], p[1] + v[1])
-            if (
-                p1[0] in range(len(rows))
-                and p1[1] in range(len(rows[0]))
-                and p1 not in path
-                and ord(rows[p1]) - ord(rows[p]) < 2
-            ):
-                climb(p1, [x for x in path])
+    dist = numpy.full(rows.shape, sys.maxsize)
+    dist[start] = 0
+    prev = numpy.full(rows.shape, None)
+    q = [(x, y) for x in range(len(rows)) for y in range(len(rows[0]))]
 
-    climb(start)
-    print(len(solution) - 1, solution)
+    while len(q):
+        u, mind = q[0], dist[q[0]]
+        for v in q:
+            if dist[v] < mind:
+                u = v
+                mind = dist[v]
+        q.remove(u)
+
+        adjacent = [(u[0] + d[0], u[1] + d[1]) for d in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+        for v in [n for n in adjacent if n in q and ord(rows[n]) - ord(rows[u]) < 2]:
+            if dist[u] + 1 < dist[v]:
+                dist[v] = dist[u] + 1
+                prev[v] = u
+
+    print(dist)
+    print(dist[end])
 
 
 def part2():
-    def climb(p, dist, tovisit):
-        adjacent = ((p[0] + d[0], p[1] + d[1]) for d in ((-1, 0), (1, 0), (0, -1), (0, 1)))
-        adjacent = [v for v in adjacent if v[0] in range(len(rows)) and v[1] in range(len(rows[0]))]
-        for p1 in adjacent:
-            if ord(rows[p1]) - ord(rows[p]) < 2 and ((not dist[p1]) or dist[p] + 1 < dist[p1]):
-                dist[p1] = dist[p] + 1
-        for p1 in adjacent:
-            if dist[p1]:
-                tovisit.append(p1)
+    start, end = find("E"), find("S")
+    rows[end] = "a"
+    rows[start] = "z"
 
-    dist = numpy.full(rows.shape, None)
+    INTMAX = len(rows) * len(rows[0]) * 2
+
+    dist = numpy.full(rows.shape, INTMAX)
     dist[start] = 0
-    tovisit = [start]
+    prev = numpy.full(rows.shape, None)
+    q = [(x, y) for x in range(len(rows)) for y in range(len(rows[0]))]
 
-    while len(tovisit) > 0:
-        p = tovisit[0]
-        del tovisit[0]
-        climb(p, dist, tovisit)
+    while len(q):
+        u, dmin = q[0], dist[q[0]]
+        for v in q:
+            if dist[v] < dmin:
+                u = v
+                dmin = dist[v]
+        q.remove(u)
 
-    print(dist[end])
+        adjacent = [(u[0] + d[0], u[1] + d[1]) for d in ((-1, 0), (1, 0), (0, -1), (0, 1))]
+        for v in [n for n in adjacent if n in q and ord(rows[u]) - ord(rows[n]) < 2]:
+            if dist[u] + 1 < dist[v]:
+                dist[v] = dist[u] + 1
+                prev[v] = u
+
+    print(dist)
+    dmin = numpy.max(dist)
+    besta = None
+    for v in ((x, y) for x in range(len(rows)) for y in range(len(rows[0])) if rows[x][y] == "a"):
+        if dist[v] < dmin:
+            besta = v
+            dmin = dist[v]
+
+    print(besta, dmin)
 
 
 part1() if PART == 1 else part2()
